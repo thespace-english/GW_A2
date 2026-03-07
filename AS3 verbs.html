@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Веселые Глаголы! 🎈</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pangolin&family=Modak&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Pangolin', cursive;
+            background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 550px;
+            text-align: center;
+            border: 5px solid #fff;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Modak', cursive;
+            color: #ff6b6b;
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 0px #fff, 4px 4px 0px rgba(0,0,0,0.1);
+        }
+
+        .verb-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 1rem;
+            font-family: 'Modak', cursive;
+            text-shadow: 2px 2px 0px #fff;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #555;
+            margin: 15px 0 5px 0;
+            font-weight: bold;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        button {
+            padding: 15px;
+            border: 3px solid #ddd;
+            border-radius: 20px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 1.3rem;
+            font-family: 'Pangolin', cursive;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 0px #ccc;
+            position: relative;
+        }
+
+        button:hover:not(:disabled) {
+            background: #fdfd96;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 0px #ccc;
+        }
+
+        button.correct {
+            background-color: #c8e6c9 !important;
+            border-color: #4caf50 !important;
+            color: #1b5e20 !important;
+            box-shadow: 0 5px 0px #388e3c !important;
+        }
+
+        button.wrong {
+            background-color: #ffcdd2 !important;
+            border-color: #f44336 !important;
+            color: #b71c1c !important;
+            box-shadow: 0 5px 0px #d32f2f !important;
+        }
+
+        .hidden { display: none !important; }
+
+        #chart-container {
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #scoreChart { max-width: 250px; }
+
+        .progress {
+            font-size: 1.1rem;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .retry-btn {
+            margin-top: 30px;
+            background: #ff6b6b;
+            color: white;
+            border: 3px solid #cc5555;
+            box-shadow: 0 5px 0px #aa4444;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress">Глагол <span id="current-idx">1</span> из 12 ⭐</div>
+    
+    <div id="quiz">
+        <div class="verb-display" id="main-verb"></div>
+        
+        <div class="section-title">Выбери форму Past Simple:</div>
+        <div class="options-grid" id="form-options"></div>
+
+        <div class="section-title">Выбери правильный перевод:</div>
+        <div class="options-grid" id="trans-options"></div>
+    </div>
+
+    <div id="result" class="hidden">
+        <h2 style="font-family:'Modak'; color:#4caf50; font-size:3rem;">Ура! Конец!</h2>
+        <div id="chart-container">
+            <canvas id="scoreChart"></canvas>
+        </div>
+        <p id="final-text" style="margin-top: 20px; font-size: 1.5rem; font-weight: bold;"></p>
+        <button class="retry-btn" onclick="location.reload()">Начать заново! 🔄</button>
+    </div>
+</div>
+
+<script>
+    // Исходный список глаголов
+    const verbsList = [
+        { inf: 'go', past: 'went', alt: ['gone', 'wented'], ru: 'идти/ехать', altRu: 'делать' },
+        { inf: 'have', past: 'had', alt: ['has', 'haved'], ru: 'иметь', altRu: 'слышать' },
+        { inf: 'make', past: 'made', alt: ['make', 'maked'], ru: 'делать/создавать', altRu: 'брать' },
+        { inf: 'read', past: 'read', alt: ['red', 'reads'], ru: 'читать', altRu: 'писать' },
+        { inf: 'say', past: 'said', alt: ['sayed', 'says'], ru: 'сказать', altRu: 'видеть' },
+        { inf: 'see', past: 'saw', alt: ['seen', 'seed'], ru: 'видеть', altRu: 'смотреть' },
+        { inf: 'stand', past: 'stood', alt: ['standed', 'stoud'], ru: 'стоять', altRu: 'сидеть' },
+        { inf: 'think', past: 'thought', alt: ['throught', 'thinked'], ru: 'думать', altRu: 'благодарить' },
+        { inf: 'wear', past: 'wore', alt: ['worn', 'weared'], ru: 'носить (одежду)', altRu: 'ждать' },
+        { inf: 'eat', past: 'ate', alt: ['eaten', 'ated'], ru: 'есть/кушать', altRu: 'пить' },
+        { inf: 'drink', past: 'drank', alt: ['drunk', 'drinked'], ru: 'пить', altRu: 'петь' },
+        { inf: 'be', past: 'was/were', alt: ['been', 'bes'], ru: 'быть', altRu: 'становиться' }
+    ];
+
+    // Функция для случайного перемешивания любого массива
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // Перемешиваем глаголы СРАЗУ при загрузке
+    let verbs = shuffleArray([...verbsList]);
+
+    let currentStep = 0;
+    let score = 0;
+    let formSelected = false;
+    let transSelected = false;
+    let currentError = false;
+
+    function initStep() {
+        const verb = verbs[currentStep];
+        formSelected = false;
+        transSelected = false;
+        currentError = false;
+        
+        document.getElementById('main-verb').textContent = verb.inf;
+        document.getElementById('current-idx').textContent = currentStep + 1;
+
+        // Перемешиваем варианты форм
+        const formOpts = shuffleArray([verb.past, ...verb.alt]);
+        const formContainer = document.getElementById('form-options');
+        formContainer.innerHTML = '';
+        formOpts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.onclick = () => check(btn, opt, verb.past, 'form');
+            formContainer.appendChild(btn);
+        });
+
+        // Перемешиваем варианты перевода
+        const transOpts = shuffleArray([verb.ru, verb.altRu]);
+        const transContainer = document.getElementById('trans-options');
+        transContainer.innerHTML = '';
+        transOpts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.onclick = () => check(btn, opt, verb.ru, 'trans');
+            transContainer.appendChild(btn);
+        });
+    }
+
+    function check(btn, selected, correct, type) {
+        const container = type === 'form' ? document.getElementById('form-options') : document.getElementById('trans-options');
+        const buttons = container.querySelectorAll('button');
+
+        if (selected === correct) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            currentError = true;
+            buttons.forEach(b => { if(b.textContent === correct) b.classList.add('correct'); });
+        }
+
+        buttons.forEach(b => b.disabled = true);
+        if(type === 'form') formSelected = true;
+        if(type === 'trans') transSelected = true;
+
+        if (formSelected && transSelected) {
+            if (!currentError) {
+                score++;
+                confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+                setTimeout(nextStep, 1000);
+            } else {
+                setTimeout(nextStep, 2000);
+            }
+        }
+    }
+
+    function nextStep() {
+        currentStep++;
+        if (currentStep < verbs.length) {
+            initStep();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz').classList.add('hidden');
+        document.getElementById('result').classList.remove('hidden');
+        document.getElementById('final-text').textContent = `Ты набрал ${score} из ${verbs.length} баллов!`;
+
+        if (score === verbs.length) {
+            var duration = 4 * 1000;
+            var end = Date.now() + duration;
+            (function frame() {
+              confetti({ particleCount: 7, angle: 60, spread: 55, origin: { x: 0 } });
+              confetti({ particleCount: 7, angle: 120, spread: 55, origin: { x: 1 } });
+              if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        new Chart(document.getElementById('scoreChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Правильно!', 'Ошибки'],
+                datasets: [{
+                    data: [score, verbs.length - score],
+                    backgroundColor: ['#4caf50', '#f44336'],
+                    borderWidth: 5
+                }]
+            }
+        });
+    }
+
+    initStep();
+</script>
+
+</body>
+</html>
