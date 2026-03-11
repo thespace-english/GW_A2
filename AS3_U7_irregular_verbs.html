@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Веселые Глаголы 🎈</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 550px;
+            text-align: center;
+            border: 8px solid #fff;
+        }
+
+        .verb-display {
+            font-size: 4.5rem; /* Крупно и четко */
+            font-weight: 700;
+            color: #2D3436;
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: #636E72;
+            margin: 20px 0 10px 0;
+            font-weight: 500;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 10px;
+            border: 3px solid #E0E0E0;
+            border-radius: 20px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 1.3rem;
+            font-family: 'Lexend', sans-serif;
+            transition: all 0.2s ease;
+            color: #2D3436;
+            outline: none;
+        }
+
+        button:hover:not(:disabled) {
+            border-color: #4facfe;
+            background: #f0faff;
+            transform: translateY(-2px);
+        }
+
+        button.correct {
+            background-color: #00B894 !important;
+            border-color: #00B894 !important;
+            color: white !important;
+        }
+
+        button.wrong {
+            background-color: #D63031 !important;
+            border-color: #D63031 !important;
+            color: white !important;
+        }
+
+        .progress { color: #636E72; font-size: 1rem; margin-bottom: 10px; }
+        .hidden { display: none !important; }
+
+        /* Итоги */
+        #chart-container { display: flex; justify-content: center; margin: 20px 0; }
+        #scoreChart { max-width: 200px; }
+
+        .error-list {
+            text-align: left;
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border: 2px solid #eee;
+            border-radius: 20px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .error-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #EEE;
+            font-size: 1.1rem;
+        }
+        .error-item:last-child { border-bottom: none; }
+        .error-item b { color: #00B894; }
+
+        .retry-btn {
+            background: #6C5CE7;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 20px;
+            font-size: 1.3rem;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-screen">
+        <div class="progress">Слово <span id="current-idx">1</span> из 12</div>
+        <div class="verb-display" id="main-verb">...</div>
+        
+        <div class="section-title">Выбери форму Past Simple:</div>
+        <div id="form-options" class="options-grid"></div>
+
+        <div class="section-title">Что это значит?</div>
+        <div id="trans-options" class="options-grid"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h1 style="color: #6C5CE7; margin: 0;">Молодец! 🌟</h1>
+        <div id="chart-container">
+            <canvas id="scoreChart"></canvas>
+        </div>
+        <h2 id="final-text" style="margin: 10px 0;"></h2>
+
+        <div id="mistakes-container" class="hidden">
+            <p style="font-weight: bold; color: #636E72;">Давай запомним эти слова:</p>
+            <div id="error-list" class="error-list"></div>
+        </div>
+
+        <button class="retry-btn" onclick="location.reload()">Играть ещё раз! 🔄</button>
+    </div>
+</div>
+
+<script>
+    const verbsData = [
+        { inf: 'go', past: 'went', alt: ['gone', 'wented'], ru: 'идти', altRu: 'делать' },
+        { inf: 'have', past: 'had', alt: ['has', 'haved'], ru: 'иметь', altRu: 'слышать' },
+        { inf: 'make', past: 'made', alt: ['make', 'maked'], ru: 'делать', altRu: 'брать' },
+        { inf: 'read', past: 'read', alt: ['red', 'reads'], ru: 'читать', altRu: 'писать' },
+        { inf: 'say', past: 'said', alt: ['sayed', 'says'], ru: 'сказать', altRu: 'видеть' },
+        { inf: 'see', past: 'saw', alt: ['seen', 'seed'], ru: 'видеть', altRu: 'слышать' },
+        { inf: 'stand', past: 'stood', alt: ['standed', 'stoud'], ru: 'стоять', altRu: 'сидеть' },
+        { inf: 'think', past: 'thought', alt: ['throught', 'thinked'], ru: 'думать', altRu: 'спасибо' },
+        { inf: 'wear', past: 'wore', alt: ['worn', 'weared'], ru: 'носить', altRu: 'ждать' },
+        { inf: 'eat', past: 'ate', alt: ['eaten', 'ated'], ru: 'кушать', altRu: 'пить' },
+        { inf: 'drink', past: 'drank', alt: ['drunk', 'drinked'], ru: 'пить', altRu: 'петь' },
+        { inf: 'be', past: 'was/were', alt: ['been', 'bes'], ru: 'быть', altRu: 'стать' }
+    ];
+
+    let currentStep = 0;
+    let score = 0;
+    let mistakes = [];
+    let formSelected = false, transSelected = false, stepMistake = false;
+
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+    let verbs = shuffle([...verbsData]);
+
+    function initStep() {
+        const v = verbs[currentStep];
+        formSelected = false; transSelected = false; stepMistake = false;
+        
+        document.getElementById('current-idx').textContent = currentStep + 1;
+        document.getElementById('main-verb').textContent = v.inf;
+
+        const fContainer = document.getElementById('form-options');
+        fContainer.innerHTML = '';
+        shuffle([v.past, ...v.alt]).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.onclick = () => check(btn, opt, v.past, 'form');
+            fContainer.appendChild(btn);
+        });
+
+        const tContainer = document.getElementById('trans-options');
+        tContainer.innerHTML = '';
+        shuffle([v.ru, v.altRu]).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.onclick = () => check(btn, opt, v.ru, 'trans');
+            tContainer.appendChild(btn);
+        });
+    }
+
+    function check(btn, selected, correct, type) {
+        const parent = btn.parentElement;
+        if (selected === correct) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            stepMistake = true;
+            Array.from(parent.children).forEach(b => { if(b.textContent === correct) b.classList.add('correct'); });
+        }
+        Array.from(parent.children).forEach(b => b.disabled = true);
+
+        if (type === 'form') formSelected = true; else transSelected = true;
+
+        if (formSelected && transSelected) {
+            if (!stepMistake) {
+                score++;
+                confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 } });
+            } else {
+                mistakes.push(verbs[currentStep]);
+            }
+            setTimeout(() => {
+                currentStep++;
+                if (currentStep < verbs.length) initStep(); else showResult();
+            }, 1000);
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        document.getElementById('final-text').textContent = `Твой счёт: ${score} из ${verbs.length}`;
+
+        if (score === verbs.length) {
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+        }
+
+        if (mistakes.length > 0) {
+            document.getElementById('mistakes-container').classList.remove('hidden');
+            const errList = document.getElementById('error-list');
+            mistakes.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'error-item';
+                div.innerHTML = `${m.inf} — это <b>${m.past}</b> (${m.ru})`;
+                errList.appendChild(div);
+            });
+        }
+
+        new Chart(document.getElementById('scoreChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Верно', 'Ошибки'],
+                datasets: [{ data: [score, verbs.length - score], backgroundColor: ['#00B894', '#D63031'] }]
+            },
+            options: { plugins: { legend: { display: false } } }
+        });
+    }
+
+    initStep();
+</script>
+</body>
+</html>
