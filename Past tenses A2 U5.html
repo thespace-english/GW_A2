@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Grammar Trainer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f0f7ee; /* Светло-зеленый теплый фон */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+        .question {
+            font-size: 1.4rem;
+            margin-bottom: 25px;
+            color: #2e4a31;
+            font-weight: 600;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        button {
+            padding: 15px;
+            font-size: 1.1rem;
+            border: 2px solid #d1e2d3;
+            border-radius: 12px;
+            background-color: #f9fdf9;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+        }
+        button:hover:not(:disabled) {
+            background-color: #e8f3e9;
+            border-color: #a8c7ab;
+        }
+        .correct {
+            background-color: #c8e6c9 !important;
+            border-color: #4caf50 !important;
+            color: #2e7d32;
+        }
+        .wrong {
+            background-color: #ffcdd2 !important;
+            border-color: #f44336 !important;
+            color: #c62828;
+        }
+        .highlight {
+            border: 3px solid #4caf50 !important;
+        }
+        #result-container {
+            display: none;
+        }
+        #chart-wrapper {
+            width: 300px;
+            margin: 0 auto;
+        }
+        .progress {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #6a8e6e;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="game">
+        <div class="progress" id="progress">Question 1 of 21</div>
+        <div class="question" id="question-text">Loading...</div>
+        <div class="options" id="options-container"></div>
+    </div>
+
+    <div id="result-container">
+        <h2>Your Result</h2>
+        <div id="chart-wrapper">
+            <canvas id="resultChart"></canvas>
+        </div>
+        <p id="score-text" style="margin-top: 20px; font-weight: bold;"></p>
+        <button onclick="location.reload()" style="margin-top: 20px; background: #4caf50; color: white;">Try Again</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // Past Simple (7)
+        { q: "We ________ at a small hotel near the beach last summer.", options: ["stayed", "were staying", "stay", "was staying"], correct: 0 },
+        { q: "I ________ Mark at the party on Friday night.", options: ["didn't saw", "wasn't seeing", "didn't see", "not saw"], correct: 2 },
+        { q: "Why ________ the meeting so early yesterday?", options: ["did they leave", "were they leaving", "they left", "did they left"], correct: 0 },
+        { q: "My parents ________ a new car two days ago.", options: ["buyed", "bought", "were buying", "did buyed"], correct: 1 },
+        { q: "________ that strange noise a minute ago?", options: ["Did you hear", "Were you hearing", "Did you heard", "You heard"], correct: 0 },
+        { q: "He ________ the book because it was too long.", options: ["not enjoyed", "didn't enjoyed", "wasn't enjoying", "didn't enjoy"], correct: 3 },
+        { q: "The film ________ at 8 PM and ended at 10 PM.", options: ["was starting", "started", "starts", "did started"], correct: 1 },
+        
+        // Past Continuous (7)
+        { q: "At 7 o'clock yesterday evening, I ________ dinner.", options: ["had", "was having", "were having", "am having"], correct: 1 },
+        { q: "Why ________ when I saw you in the hall?", options: ["did you cry", "were you crying", "you were crying", "was you crying"], correct: 1 },
+        { q: "They ________ football at noon; they were resting.", options: ["didn't play", "wasn't playing", "weren't playing", "not were playing"], correct: 2 },
+        { q: "What ________ in the garden all afternoon?", options: ["was he doing", "did he do", "were he doing", "he was doing"], correct: 0 },
+        { q: "It ________ heavily when we woke up.", options: ["rained", "were raining", "was raining", "is raining"], correct: 2 },
+        { q: "I ________ at 11 PM; I was reading a magazine.", options: ["wasn't sleeping", "didn't sleep", "not was sleeping", "weren't sleeping"], correct: 0 },
+        { q: "Who ________ that loud noise at midnight?", options: ["did make", "was making", "were making", "made"], correct: 1 },
+
+        // Interrupted Actions (7)
+        { q: "I ________ TV when the lights went out.", options: ["watched", "was watching", "were watching", "am watching"], correct: 1 },
+        { q: "While we were walking in the forest, it ________ to snow.", options: ["started", "was starting", "starts", "were starting"], correct: 0 },
+        { q: "She ________ her phone while she was running for the bus.", options: ["was dropping", "drops", "dropped", "were dropping"], correct: 2 },
+        { q: "The teacher entered while the kids ________.", options: ["shouted", "were shouting", "was shouting", "are shouting"], correct: 1 },
+        { q: "My dad fell asleep while he ________ a book.", options: ["read", "was reading", "were reading", "is reading"], correct: 1 },
+        { q: "We found some old photos while we ________ the attic.", options: ["cleaned", "were cleaning", "was cleaning", "are cleaning"], correct: 1 },
+        { q: "I saw an old friend while I ________ for the train.", options: ["waited", "was waiting", "were waiting", "am waiting"], correct: 1 }
+    ];
+
+    // Shuffle questions
+    const quizData = questions.sort(() => Math.random() - 0.5);
+
+    let currentIdx = 0;
+    let score = 0;
+
+    const qText = document.getElementById('question-text');
+    const optionsBox = document.getElementById('options-container');
+    const progressText = document.getElementById('progress');
+    const gameBox = document.getElementById('game');
+    const resultBox = document.getElementById('result-container');
+
+    function loadQuestion() {
+        const current = quizData[currentIdx];
+        progressText.innerText = `Question ${currentIdx + 1} of 21`;
+        qText.innerText = current.q;
+        optionsBox.innerHTML = '';
+
+        current.options.forEach((opt, i) => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(i, current.correct);
+            optionsBox.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, correct) {
+        const buttons = optionsBox.querySelectorAll('button');
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selected === correct) {
+            buttons[selected].classList.add('correct');
+            score++;
+        } else {
+            buttons[selected].classList.add('wrong');
+            buttons[correct].classList.add('highlight');
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }, 1500);
+    }
+
+    function showResults() {
+        gameBox.style.display = 'none';
+        resultBox.style.display = 'block';
+        document.getElementById('score-text').innerText = `You got ${score} out of 21 correct!`;
+
+        const ctx = document.getElementById('resultChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Correct', 'Incorrect'],
+                datasets: [{
+                    data: [score, 21 - score],
+                    backgroundColor: ['#4caf50', '#f44336'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
