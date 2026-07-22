@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geographical Features - Interactive Trainer</title>
+  <style>
+    :root {
+      --bg-color: #f7faf7;
+      --accent-teal: #007e7a;
+      --text-dark: #1a1a1a;
+      --circle-color: rgba(0, 126, 122, 0.05);
+      --correct-color: #2e7d32;
+      --wrong-color: #c62828;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .decoration {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .circle-big {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      background: var(--circle-color);
+      top: -100px;
+      right: -100px;
+    }
+
+    .circle-small-1 {
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: var(--circle-color);
+      top: 80px;
+      right: 300px;
+    }
+
+    .circle-small-2 {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: var(--circle-color);
+      top: 250px;
+      right: 180px;
+    }
+
+    h1 {
+      color: var(--accent-teal);
+      margin-top: 10px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 32px;
+    }
+
+    /* Word Bank */
+    .word-bank {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      background: #ffffff;
+      padding: 18px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      max-width: 1100px;
+      width: 100%;
+      margin-bottom: 20px;
+      min-height: 60px;
+    }
+
+    .word-chip {
+      background-color: #e6f2f2;
+      color: var(--accent-teal);
+      border: 2px solid var(--accent-teal);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      font-size: 16px;
+    }
+
+    .word-chip:hover {
+      background-color: var(--accent-teal);
+      color: #fff;
+    }
+
+    .word-chip.selected {
+      background-color: var(--accent-teal);
+      color: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 0 8px rgba(0,126,122,0.4);
+    }
+
+    .word-chip.placed {
+      opacity: 0.35;
+      pointer-events: none;
+      border-color: #ccc;
+      background-color: #f0f0f0;
+      color: #888;
+    }
+
+    /* Main Container */
+    .game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1100px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .image-container {
+      position: relative;
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e0e0e0;
+    }
+
+    .landscape-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Drop Slots Grid Layouts above and below image */
+    .slots-row {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+
+    .drop-slot {
+      min-height: 44px;
+      background: #ffffff;
+      border: 2px dashed var(--accent-teal);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--text-dark);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 4px 6px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .drop-slot:hover {
+      background: #f0fdfd;
+      border-style: solid;
+    }
+
+    .drop-slot.correct {
+      background-color: #e8f5e9 !important;
+      border-color: var(--correct-color) !important;
+      color: var(--correct-color) !important;
+      border-style: solid !important;
+      pointer-events: none; /* Замораживаем правильные ответы */
+    }
+
+    .drop-slot.wrong {
+      background-color: #ffebee !important;
+      border-color: var(--wrong-color) !important;
+      color: var(--wrong-color) !important;
+      border-style: solid !important;
+    }
+
+    /* Крупные цифры для удобной ориентации */
+    .slot-label {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent-teal);
+      margin-right: 6px;
+    }
+
+    .drop-slot.correct .slot-label {
+      color: var(--correct-color);
+    }
+
+    .drop-slot.wrong .slot-label {
+      color: var(--wrong-color);
+    }
+
+    /* Control buttons */
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 15px;
+    }
+
+    .btn {
+      background-color: var(--accent-teal);
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:hover {
+      background-color: #005e5b;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-retry {
+      background-color: #d97706;
+    }
+
+    .btn-retry:hover {
+      background-color: #b45309;
+    }
+
+    .btn-reset {
+      background-color: #757575;
+    }
+
+    .btn-reset:hover {
+      background-color: #616161;
+    }
+
+    @media (max-width: 900px) {
+      .slots-row {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .slots-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="decoration">
+    <div class="circle-big"></div>
+    <div class="circle-small-1"></div>
+    <div class="circle-small-2"></div>
+  </div>
+
+  <h1>Geographical Features</h1>
+
+  <!-- Word Bank -->
+  <div class="word-bank" id="wordBank"></div>
+
+  <!-- Interactive Game Area -->
+  <div class="game-wrapper">
+    <!-- Top Row: Slots 1 to 8 -->
+    <div class="slots-row">
+      <div class="drop-slot" id="slot-1" data-number="1"><span class="slot-label">1:</span></div>
+      <div class="drop-slot" id="slot-2" data-number="2"><span class="slot-label">2:</span></div>
+      <div class="drop-slot" id="slot-3" data-number="3"><span class="slot-label">3:</span></div>
+      <div class="drop-slot" id="slot-4" data-number="4"><span class="slot-label">4:</span></div>
+      <div class="drop-slot" id="slot-5" data-number="5"><span class="slot-label">5:</span></div>
+      <div class="drop-slot" id="slot-6" data-number="6"><span class="slot-label">6:</span></div>
+      <div class="drop-slot" id="slot-7" data-number="7"><span class="slot-label">7:</span></div>
+      <div class="drop-slot" id="slot-8" data-number="8"><span class="slot-label">8:</span></div>
+    </div>
+
+    <!-- Landscape Image Area -->
+    <div class="image-container">
+      <img src="landscape.png" alt="Geographical Features Landscape" class="landscape-img" onerror="this.onerror=null; this.src='landscape.jpg';">
+    </div>
+
+    <!-- Bottom Row: Slots 9 to 15 -->
+    <div class="slots-row">
+      <div class="drop-slot" id="slot-9"  data-number="9"><span class="slot-label">9:</span></div>
+      <div class="drop-slot" id="slot-10" data-number="10"><span class="slot-label">10:</span></div>
+      <div class="drop-slot" id="slot-11" data-number="11"><span class="slot-label">11:</span></div>
+      <div class="drop-slot" id="slot-12" data-number="12"><span class="slot-label">12:</span></div>
+      <div class="drop-slot" id="slot-13" data-number="13"><span class="slot-label">13:</span></div>
+      <div class="drop-slot" id="slot-14" data-number="14"><span class="slot-label">14:</span></div>
+      <div class="drop-slot" id="slot-15" data-number="15"><span class="slot-label">15:</span></div>
+      <div class="drop-slot" style="visibility: hidden;"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" onclick="checkAnswers()">Check</button>
+    <button class="btn btn-retry" id="btnRetry" onclick="clearWrongOnly()" style="display: none;">Retry Incorrect</button>
+    <button class="btn btn-reset" onclick="resetGame()">Reset All</button>
+  </div>
+
+  <script>
+    const correctMapping = {
+      "1": "sky",
+      "2": "mountain",
+      "3": "hill",
+      "4": "lake",
+      "5": "waterfall",
+      "6": "valley",
+      "7": "river",
+      "8": "forest",
+      "9": "field",
+      "10": "grass",
+      "11": "flowers",
+      "12": "plants",
+      "13": "ocean",
+      "14": "beach",
+      "15": "island"
+    };
+
+    const words = [
+      "beach", "field", "flowers", "forest", "grass", 
+      "hill", "island", "lake", "mountain", "ocean", 
+      "plants", "river", "sky", "valley", "waterfall"
+    ];
+
+    let selectedWordChip = null;
+
+    function initGame() {
+      document.getElementById('btnRetry').style.display = 'none';
+      const wordBank = document.getElementById('wordBank');
+      wordBank.innerHTML = '';
+      
+      words.slice().sort().forEach(word => {
+        const chip = document.createElement('div');
+        chip.className = 'word-chip';
+        chip.textContent = word;
+        chip.draggable = true;
+        
+        chip.addEventListener('click', () => handleChipClick(chip));
+
+        chip.addEventListener('dragstart', (e) => {
+          if (chip.classList.contains('placed')) return;
+          e.dataTransfer.setData('text/plain', word);
+          selectedWordChip = chip;
+        });
+
+        wordBank.appendChild(chip);
+      });
+
+      document.querySelectorAll('.drop-slot').forEach(slot => {
+        const num = slot.dataset.number;
+        if (!num) return;
+        
+        slot.innerHTML = `<span class="slot-label">${num}:</span>`;
+        delete slot.dataset.word;
+        slot.className = 'drop-slot';
+        
+        slot.addEventListener('click', () => handleSlotClick(slot));
+
+        slot.addEventListener('dragover', (e) => e.preventDefault());
+        slot.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (slot.classList.contains('correct')) return;
+          const word = e.dataTransfer.getData('text/plain');
+          placeWordInSlot(word, slot);
+        });
+      });
+    }
+
+    function handleChipClick(chip) {
+      if (chip.classList.contains('placed')) return;
+
+      if (selectedWordChip) {
+        selectedWordChip.classList.remove('selected');
+      }
+
+      if (selectedWordChip === chip) {
+        selectedWordChip = null;
+      } else {
+        selectedWordChip = chip;
+        chip.classList.add('selected');
+      }
+    }
+
+    function handleSlotClick(slot) {
+      const num = slot.dataset.number;
+      if (!num || slot.classList.contains('correct')) return;
+
+      if (selectedWordChip) {
+        if (slot.dataset.word) {
+          returnWordToBank(slot.dataset.word);
+        }
+        
+        placeWordInSlot(selectedWordChip.textContent, slot);
+        selectedWordChip.classList.remove('selected');
+        selectedWordChip.classList.add('placed');
+        selectedWordChip = null;
+      } else if (slot.dataset.word) {
+        returnWordToBank(slot.dataset.word);
+        slot.innerHTML = `<span class="slot-label">${num}:</span>`;
+        delete slot.dataset.word;
+        slot.className = 'drop-slot';
+      }
+    }
+
+    function placeWordInSlot(word, slot) {
+      const num = slot.dataset.number;
+      
+      document.querySelectorAll('.drop-slot').forEach(s => {
+        if (s.dataset.word === word && !s.classList.contains('correct')) {
+          const sNum = s.dataset.number;
+          s.innerHTML = `<span class="slot-label">${sNum}:</span>`;
+          delete s.dataset.word;
+          s.className = 'drop-slot';
+        }
+      });
+
+      slot.innerHTML = `<span class="slot-label">${num}:</span> ${word}`;
+      slot.dataset.word = word;
+
+      document.querySelectorAll('.word-chip').forEach(chip => {
+        if (chip.textContent === word) {
+          chip.classList.add('placed');
+        }
+      });
+    }
+
+    function returnWordToBank(word) {
+      document.querySelectorAll('.word-chip').forEach(chip => {
+        if (chip.textContent === word) {
+          chip.classList.remove('placed');
+        }
+      });
+    }
+
+    function checkAnswers() {
+      let hasWrong = false;
+      
+      document.querySelectorAll('.drop-slot').forEach(slot => {
+        const num = slot.dataset.number;
+        if (!num) return;
+        
+        const userWord = slot.dataset.word;
+        if (!userWord) return;
+
+        if (correctMapping[num] === userWord) {
+          slot.className = 'drop-slot correct';
+        } else {
+          slot.className = 'drop-slot wrong';
+          hasWrong = true;
+        }
+      });
+
+      if (hasWrong) {
+        document.getElementById('btnRetry').style.display = 'inline-block';
+      } else {
+        document.getElementById('btnRetry').style.display = 'none';
+      }
+    }
+
+    function clearWrongOnly() {
+      document.querySelectorAll('.drop-slot.wrong').forEach(slot => {
+        const num = slot.dataset.number;
+        const wrongWord = slot.dataset.word;
+        
+        if (wrongWord) {
+          returnWordToBank(wrongWord);
+        }
+        
+        slot.innerHTML = `<span class="slot-label">${num}:</span>`;
+        delete slot.dataset.word;
+        slot.className = 'drop-slot';
+      });
+
+      document.getElementById('btnRetry').style.display = 'none';
+    }
+
+    function resetGame() {
+      selectedWordChip = null;
+      initGame();
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
